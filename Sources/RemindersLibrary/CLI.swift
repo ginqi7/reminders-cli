@@ -142,6 +142,11 @@ private struct Add: ParsableCommand {
     var format: OutputFormat = .plain
 
     @Option(
+      name: .shortAndLong,
+      help: "URL, unvisible in Reminders GUI")
+    var url: String?
+    
+    @Option(
         name: .shortAndLong,
         help: "The notes to add to the reminder")
     var notes: String?
@@ -153,7 +158,9 @@ private struct Add: ParsableCommand {
             toListNamed: self.listName,
             dueDateComponents: self.dueDate,
             priority: priority,
-            outputFormat: format)
+            outputFormat: format,
+            url: self.url
+        )
     }
 }
 

@@ -307,13 +307,18 @@ public final class Reminders {
         toListNamed name: String,
         dueDateComponents: DateComponents?,
         priority: Priority,
-        outputFormat: OutputFormat)
+        outputFormat: OutputFormat,
+        url: String?
+    )
     {
         let calendar = self.calendar(withName: name)
         let reminder = EKReminder(eventStore: Store)
         reminder.calendar = calendar
         reminder.title = string
         reminder.notes = notes
+        if let unwrappedURL = url {
+            reminder.url = URL(string: unwrappedURL)
+        }
         reminder.dueDateComponents = dueDateComponents
         reminder.priority = Int(priority.value.rawValue)
         if let dueDate = dueDateComponents?.date, dueDateComponents?.hour != nil {
