@@ -223,7 +223,7 @@ public final class Reminders {
         }
     }
 
-    func edit(itemAtIndex index: String, onListNamed name: String, newText: String?, newNotes: String?) {
+    func edit(itemAtIndex index: String, onListNamed name: String, newText: String?, newNotes: String?, outputFormat: OutputFormat) {
         let calendar = self.calendar(withName: name)
         let semaphore = DispatchSemaphore(value: 0)
 
@@ -237,7 +237,13 @@ public final class Reminders {
                 reminder.title = newText ?? reminder.title
                 reminder.notes = newNotes ?? reminder.notes
                 try Store.save(reminder, commit: true)
-                print("Updated reminder '\(reminder.title!)'")
+                switch (outputFormat) {
+                case .json:
+                    print(encodeToJson(data: reminder))
+                default:
+                    print("Updated reminder '\(reminder.title!)'")
+                }
+
             } catch let error {
                 print("Failed to update reminder with error: \(error)")
                 exit(1)

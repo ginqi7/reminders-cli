@@ -145,7 +145,7 @@ private struct Add: ParsableCommand {
       name: .shortAndLong,
       help: "URL, unvisible in Reminders GUI")
     var url: String?
-    
+
     @Option(
         name: .shortAndLong,
         help: "The notes to add to the reminder")
@@ -247,6 +247,11 @@ private struct Edit: ParsableCommand {
         help: "The new reminder contents")
     var reminder: [String] = []
 
+    @Option(
+      name: .shortAndLong,
+      help: "format, either of 'plain' or 'json'")
+    var format: OutputFormat = .plain
+
     func validate() throws {
         if self.reminder.isEmpty && self.notes == nil {
             throw ValidationError("Must specify either new reminder content or new notes")
@@ -259,7 +264,8 @@ private struct Edit: ParsableCommand {
             itemAtIndex: self.index,
             onListNamed: self.listName,
             newText: newText.isEmpty ? nil : newText,
-            newNotes: self.notes
+            newNotes: self.notes,
+            outputFormat: self.format
         )
     }
 }
