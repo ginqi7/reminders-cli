@@ -177,8 +177,13 @@ private struct Complete: ParsableCommand {
         help: "The index or id of the reminder to delete, see 'show' for indexes")
     var index: String
 
+    @Option(
+      name: .shortAndLong,
+      help: "format, either of 'plain' or 'json'")
+    var format: OutputFormat = .plain
+
     func run() {
-        reminders.setComplete(true, itemAtIndex: self.index, onListNamed: self.listName)
+        reminders.setComplete(true, itemAtIndex: self.index, onListNamed: self.listName, outputFormat: self.format)
     }
 }
 
@@ -195,8 +200,13 @@ private struct Uncomplete: ParsableCommand {
         help: "The index or id of the reminder to delete, see 'show' for indexes")
     var index: String
 
+    @Option(
+      name: .shortAndLong,
+      help: "format, either of 'plain' or 'json'")
+    var format: OutputFormat = .plain
+
     func run() {
-        reminders.setComplete(false, itemAtIndex: self.index, onListNamed: self.listName)
+        reminders.setComplete(false, itemAtIndex: self.index, onListNamed: self.listName, outputFormat: self.format)
     }
 }
 
@@ -265,7 +275,7 @@ private struct Edit: ParsableCommand {
             onListNamed: self.listName,
             newText: newText.isEmpty ? nil : newText,
             newNotes: self.notes,
-            outputFormat: self.format
+            outputFormat : self.format
         )
     }
 }

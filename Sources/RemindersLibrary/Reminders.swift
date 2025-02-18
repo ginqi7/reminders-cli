@@ -255,14 +255,14 @@ public final class Reminders {
         semaphore.wait()
     }
 
-    func setComplete(_ complete: Bool, itemAtIndex index: String, onListNamed name: String) {
+    func setComplete(_ complete: Bool, itemAtIndex index: String, onListNamed name: String, outputFormat: OutputFormat) {
         let calendar = self.calendar(withName: name)
         let semaphore = DispatchSemaphore(value: 0)
         let displayOptions = complete ? DisplayOptions.incomplete : .complete
         let action = complete ? "Completed" : "Uncompleted"
 
         self.reminders(on: [calendar], displayOptions: displayOptions) { reminders in
-            print(reminders.map { $0.title! })
+            // print(reminders.map { $0.title! })
             guard let reminder = self.getReminder(from: reminders, at: index) else {
                 print("No reminder at index \(index) on \(name)")
                 exit(1)
@@ -271,7 +271,12 @@ public final class Reminders {
             do {
                 reminder.isCompleted = complete
                 try Store.save(reminder, commit: true)
-                print("\(action) '\(reminder.title!)'")
+                switch (outputFormat) {
+                case .json:
+                    print(encodeToJson(data: reminder))
+                default:
+                    print("\(action) '\(reminder.title!)'")
+                }
             } catch let error {
                 print("Failed to save reminder with error: \(error)")
                 exit(1)
