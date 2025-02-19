@@ -230,7 +230,7 @@ public final class Reminders {
         }
     }
 
-    func edit(itemAtIndex index: String, onListNamed name: String, newText: String?, newNotes: String?, outputFormat: OutputFormat) {
+    func edit(itemAtIndex index: String, onListNamed name: String, newText: String?, newNotes: String?, outputFormat: OutputFormat, url: String?) {
         let calendar = self.calendar(withName: name)
         let semaphore = DispatchSemaphore(value: 0)
 
@@ -243,6 +243,9 @@ public final class Reminders {
             do {
                 reminder.title = newText ?? reminder.title
                 reminder.notes = newNotes ?? reminder.notes
+                if let unwrappedURL = url {
+                    reminder.url = URL(string: unwrappedURL)
+                }
                 try Store.save(reminder, commit: true)
                 switch (outputFormat) {
                 case .json:

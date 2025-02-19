@@ -269,6 +269,11 @@ private struct Edit: ParsableCommand {
       help: "format, either of 'plain' or 'json'")
     var format: OutputFormat = .plain
 
+    @Option(
+      name: .shortAndLong,
+      help: "URL, unvisible in Reminders GUI")
+    var url: String?
+
     func validate() throws {
         if self.reminder.isEmpty && self.notes == nil {
             throw ValidationError("Must specify either new reminder content or new notes")
@@ -282,7 +287,8 @@ private struct Edit: ParsableCommand {
             onListNamed: self.listName,
             newText: newText.isEmpty ? nil : newText,
             newNotes: self.notes,
-            outputFormat : self.format
+            outputFormat : self.format,
+            url: self.url
         )
     }
 }
