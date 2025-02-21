@@ -26,7 +26,7 @@ private func format(_ reminder: EKReminder, at index: Int?, listName: String? = 
 }
 
 public enum OutputFormat: String, ExpressibleByArgument {
-    case json, plain
+    case json, lisp, plain
 }
 
 public enum DisplayOptions: String, Decodable {
@@ -93,6 +93,8 @@ public final class Reminders {
         switch (outputFormat) {
         case .json:
             print(encodeToJson(data: self.getListNames()))
+        case .lisp:
+            print(encodeToLisp(data: self.getListNames()))
         default:
             for name in self.getListNames() {
                 print(name)
@@ -132,6 +134,8 @@ public final class Reminders {
             switch outputFormat {
             case .json:
                 print(encodeToJson(data: matchingReminders.map { $0.0 }))
+            case .lisp:
+                print(encodeToLisp(data: matchingReminders.map { $0.0 }))
             case .plain:
                 for (reminder, i, listName) in matchingReminders {
                     print(format(reminder, at: i, listName: listName))
@@ -177,6 +181,8 @@ public final class Reminders {
             switch outputFormat {
             case .json:
                 print(encodeToJson(data: matchingReminders.map { $0.0 }))
+            case .lisp:
+                print(encodeToLisp(data: matchingReminders.map { $0.0 }))
             case .plain:
                 for (reminder, i) in matchingReminders {
                     print(format(reminder, at: i))
@@ -250,6 +256,8 @@ public final class Reminders {
                 switch (outputFormat) {
                 case .json:
                     print(encodeToJson(data: reminder))
+                case .lisp:
+                    print(encodeToLisp(data: reminder))
                 default:
                     print("Updated reminder '\(reminder.title!)'")
                 }
@@ -284,6 +292,8 @@ public final class Reminders {
                 switch (outputFormat) {
                 case .json:
                     print(encodeToJson(data: reminder))
+                case .lisp:
+                    print(encodeToLisp(data: reminder))
                 default:
                     print("\(action) '\(reminder.title!)'")
                 }
@@ -351,6 +361,8 @@ public final class Reminders {
             switch (outputFormat) {
             case .json:
                 print(encodeToJson(data: reminder))
+            case .lisp:
+                print(encodeToLisp(data: reminder))
             default:
                 print("Added '\(reminder.title!)' to '\(calendar.title)'")
             }
@@ -409,6 +421,12 @@ public final class Reminders {
         }
     }
 
+}
+
+private func encodeToLisp(data: Encodable) -> String {
+    let encoder = LispEncoder()
+    let encoded = try! encoder.encode(data)
+    return encoded
 }
 
 private func encodeToJson(data: Encodable) -> String {
