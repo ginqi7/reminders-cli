@@ -214,7 +214,7 @@ public final class Reminders {
     return matchedReminder
   }
 
-    public func addReminder(
+  public func addReminder(
     string: String,
     notes: String?,
     listId: String,

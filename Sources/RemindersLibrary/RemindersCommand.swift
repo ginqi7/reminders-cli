@@ -56,9 +56,10 @@ public final class RemindersCommand {
     url: String?, isCompleted: Bool?, priority: Int?
   ) {
     do {
-      let _ = try reminders.updateItem(
+      let reminder = try reminders.updateItem(
         itemAtIndex: index, listId: listId, newText: newText, newNotes: newNotes, url: url,
         isCompleted: isCompleted, priority: priority)
+      printOutput(data: reminder, action: "Edit Reminder: ")
     } catch let error {
       print("Failed create new list with error: \(error)")
       exit(1)
@@ -70,9 +71,10 @@ public final class RemindersCommand {
 
   ) {
     do {
-      let _ = try reminders.updateItem(
+      let reminder = try reminders.updateItem(
         itemAtIndex: index, listId: listId, newText: nil, newNotes: nil, url: nil,
         isCompleted: complete, priority: nil)
+      printOutput(data: reminder, action: "Complete Reminder: ")
     } catch let error {
       print("Failed create new list with error: \(error)")
       exit(1)
@@ -98,13 +100,14 @@ public final class RemindersCommand {
     url: String?
   ) {
     do {
-      let _ = try reminders.addReminder(
+      let reminder = try reminders.addReminder(
         string: string,
         notes: notes,
         listId: listId,
         dueDateComponents: dueDateComponents,
         priority: priority,
         url: url)
+      printOutput(data: reminder, action: "Add Reminder: ")
     } catch let error {
       print("Failed to save reminder with error: \(error)")
       exit(1)
