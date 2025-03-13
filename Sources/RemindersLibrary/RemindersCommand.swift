@@ -1,10 +1,5 @@
-import ArgumentParser
 import EventKit
 import Foundation
-
-public enum OutputFormat: String, ExpressibleByArgument {
-  case json, lisp, plain
-}
 
 public final class RemindersCommand {
 
@@ -27,23 +22,19 @@ public final class RemindersCommand {
     printOutput(data: lists)
   }
 
-  func showAllReminders(
-    dueOn dueDate: DateComponents?, includeOverdue: Bool,
-    displayOptions: DisplayOptions
-  ) {
+  func showAllReminders(displayOptions: DisplayOptions) {
     let items = reminders.allReminders(displayOptions: displayOptions)
     printOutput(data: items)
   }
 
   func showListItems(
-    withName name: String, dueOn dueDate: DateComponents?, includeOverdue: Bool,
-    displayOptions: DisplayOptions, sort: Sort,
-    sortOrder: CustomSortOrder
+    query: String,
+    displayOptions: DisplayOptions
   ) {
     do {
       let items = try reminders.getListItems(
-        withName: name, dueOn: dueDate, includeOverdue: includeOverdue,
-        displayOptions: displayOptions, sort: sort, sortOrder: sortOrder)
+        query: query,
+        displayOptions: displayOptions)
       printOutput(data: items)
     } catch let error {
       print("Failed create new list with error: \(error)")
@@ -52,12 +43,12 @@ public final class RemindersCommand {
   }
 
   func edit(
-    itemAtIndex index: String, onListId listId: String, newText: String?, newNotes: String?,
+    query: String, listQuery: String, newText: String?, newNotes: String?,
     url: String?, isCompleted: Bool?, priority: Int?
   ) {
     do {
       let reminder = try reminders.updateItem(
-        itemAtIndex: index, listId: listId, newText: newText, newNotes: newNotes, url: url,
+        query: query, listQuery: listQuery, newText: newText, newNotes: newNotes, url: url,
         isCompleted: isCompleted, priority: priority)
       printOutput(data: reminder, action: "Edit Reminder: ")
     } catch let error {
@@ -67,12 +58,12 @@ public final class RemindersCommand {
   }
 
   func setComplete(
-    _ complete: Bool, itemAtIndex index: String, onListId listId: String
+    _ complete: Bool, query: String, listQuery: String
 
   ) {
     do {
       let reminder = try reminders.updateItem(
-        itemAtIndex: index, listId: listId, newText: nil, newNotes: nil, url: nil,
+        query: query, listQuery: listQuery, newText: nil, newNotes: nil, url: nil,
         isCompleted: complete, priority: nil)
       printOutput(data: reminder, action: "Complete Reminder: ")
     } catch let error {
@@ -82,9 +73,9 @@ public final class RemindersCommand {
 
   }
 
-  func delete(indexOrId: String, listId: String) {
+  func delete(query: String, listQuery: String) {
     do {
-      try _ = reminders.delete(indexOrId: indexOrId, listId: listId)
+      try _ = reminders.delete(query: query, listQuery: listQuery)
     } catch let error {
       print("Failed create new list with error: \(error)")
       exit(1)
@@ -94,7 +85,7 @@ public final class RemindersCommand {
   func addReminder(
     string: String,
     notes: String?,
-    listId: String,
+    listQuery: String,
     dueDateComponents: DateComponents?,
     priority: Priority,
     url: String?
@@ -103,7 +94,7 @@ public final class RemindersCommand {
       let reminder = try reminders.addReminder(
         string: string,
         notes: notes,
-        listId: listId,
+        listQuery: listQuery,
         dueDateComponents: dueDateComponents,
         priority: priority,
         url: url)

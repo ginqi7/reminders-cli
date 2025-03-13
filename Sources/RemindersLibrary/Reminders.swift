@@ -1,4 +1,3 @@
-import ArgumentParser
 import EventKit
 import Foundation
 
@@ -7,47 +6,6 @@ private let Store = EKEventStore()
 extension EKReminder {
   var mappedPriority: EKReminderPriority {
     UInt(exactly: self.priority).flatMap(EKReminderPriority.init) ?? EKReminderPriority.none
-  }
-}
-
-enum RemindersError: Error {
-  case listSourceError(message: String)
-  case listError(message: String)
-  case reminderError(message: String)
-  case outOfRange(message: String)
-  case unknown(message: String)
-}
-
-public enum DisplayOptions: String, Decodable {
-  case all
-  case incomplete
-  case complete
-}
-
-public enum Priority: String, ExpressibleByArgument {
-  case none
-  case low
-  case medium
-  case high
-
-  var value: EKReminderPriority {
-    switch self {
-    case .none: return .none
-    case .low: return .low
-    case .medium: return .medium
-    case .high: return .high
-    }
-  }
-
-  init?(_ priority: EKReminderPriority) {
-    switch priority {
-    case .none: return nil
-    case .low: self = .low
-    case .medium: self = .medium
-    case .high: self = .high
-    @unknown default:
-      return nil
-    }
   }
 }
 
@@ -137,93 +95,56 @@ public final class Reminders {
     newList.title = name
     newList.source = source
 
-    do {
-      try store.saveCalendar(newList, commit: true)
-      return newList
-    } catch let error {
-      throw RemindersError.listError(message: "Failed create new list with error: \(error)")
-    }
+    try store.saveCalendar(newList, commit: true)
+    return newList
   }
 
-  func getListItems(
-    withName name: String, dueOn dueDate: DateComponents?, includeOverdue: Bool,
-    displayOptions: DisplayOptions, sort: Sort,
-    sortOrder: CustomSortOrder
-  ) throws -> [EKReminder] {
+  func getListItems(query: String, displayOptions: DisplayOptions = .all) throws -> [EKReminder] {
     var matchingReminders = [EKReminder]()
-
     let semaphore = DispatchSemaphore(value: 0)
-    let calendar = Calendar.current
-    let calendars = [try self.calendar(withName: name)]
-    self.reminders(on: calendars, displayOptions: displayOptions) {
-      reminders in
-
-      let reminders =
-        sort == .none ? reminders : reminders.sorted(by: sort.sortFunction(order: sortOrder))
-      for (_, reminder) in reminders.enumerated() {
-        // let index = sort == .none ? i : nil
-        guard let dueDate = dueDate?.date else {
-          matchingReminders.append(reminder)
-          continue
-        }
-
-        guard let reminderDueDate = reminder.dueDateComponents?.date else {
-          continue
-        }
-
-        let sameDay =
-          calendar.compare(
-            reminderDueDate, to: dueDate, toGranularity: .day) == .orderedSame
-        let earlierDay =
-          calendar.compare(
-            reminderDueDate, to: dueDate, toGranularity: .day) == .orderedAscending
-
-        if sameDay || (includeOverdue && earlierDay) {
-          matchingReminders.append(reminder)
-        }
-      }
-
+    let calendar = try self.getCalendar(query: query)
+    self.reminders(on: [calendar], displayOptions: displayOptions) {
+      matchingReminders.append(contentsOf: $0)
       semaphore.signal()
     }
-
     semaphore.wait()
     return matchingReminders
   }
 
-  func delete(indexOrId: String, listId: String) throws -> EKReminder? {
-    let calendar = try self.calendar(id: listId)
+  public func delete(
+    query: String, listQuery: String, displayOptions: DisplayOptions = .all
+  ) throws -> EKReminder? {
+    let calendar = try self.getCalendar(query: listQuery)
     let semaphore = DispatchSemaphore(value: 0)
     var matchedReminder: EKReminder? = nil
-    self.reminders(on: [calendar], displayOptions: .incomplete) { reminders in
-      guard let reminder = self.getReminder(from: reminders, at: indexOrId) else {
-        print("No reminder at index or ID \(indexOrId) on \(listId)")
-        return
-      }
-
+    var error: Error? = nil
+    self.reminders(on: [calendar], displayOptions: displayOptions) { reminders in
       do {
+        let reminder = try self.getReminder(from: reminders, on: calendar, query: query)
         try Store.remove(reminder, commit: true)
         matchedReminder = reminder
-        print("Deleted '\(reminder.title!)'")
-      } catch let error {
-        print("Failed to delete reminder with error: \(error)")
-        return
+      } catch (let err) {
+        error = err
       }
       semaphore.signal()
     }
     semaphore.wait()
+    if let error = error {
+      throw error
+    }
     return matchedReminder
   }
 
   public func addReminder(
     string: String,
     notes: String?,
-    listId: String,
+    listQuery: String,
     dueDateComponents: DateComponents?,
     priority: Priority,
     url: String?
   ) throws -> EKReminder? {
 
-    let calendar = try self.calendar(id: listId)
+    let calendar = self.calendar(query: listQuery)
     let reminder = EKReminder(eventStore: Store)
     reminder.calendar = calendar
     reminder.title = string
@@ -236,19 +157,14 @@ public final class Reminders {
     if let dueDate = dueDateComponents?.date, dueDateComponents?.hour != nil {
       reminder.addAlarm(EKAlarm(absoluteDate: dueDate))
     }
-
-    do {
-      try Store.save(reminder, commit: true)
-    } catch let error {
-      throw RemindersError.reminderError(message: "Failed to save reminder with error: \(error)")
-    }
+    try Store.save(reminder, commit: true)
     return reminder
   }
 
   /// Update an exist item.
   /// - Parameters:
   ///   - index: The index or external ID of the reminder.
-  ///   - listId: List Id
+  ///   - listQuery: List Id
   ///   - newText: new text of reminder
   ///   - newNotes: new notes of reminder
   ///   - url: new url of reminder
@@ -258,8 +174,8 @@ public final class Reminders {
   /// - Throws:
   /// - Returns: an optional EKReminder
   public func updateItem(
-    itemAtIndex index: String,
-    listId: String,
+    query: String,
+    listQuery: String,
     newText: String?,
     newNotes: String?,
     url: String?,
@@ -267,18 +183,14 @@ public final class Reminders {
     priority: Int?
   ) throws -> EKReminder? {
 
-    let calendar = try self.calendar(id: listId)
+    let calendar = try self.getCalendar(query: listQuery)
     var result: EKReminder? = nil
     let semaphore = DispatchSemaphore(value: 0)
-
+    var error: Error? = nil
     self.reminders(on: [calendar], displayOptions: .incomplete) { reminders in
-      guard let reminder = self.getReminder(from: reminders, at: index) else {
-        print("No reminder at index \(index) on \(listId)")
-        return
-      }
-      result = reminder
-
       do {
+        let reminder = try self.getReminder(from: reminders, on: calendar, query: query)
+        result = reminder
         reminder.title = newText ?? reminder.title
         reminder.notes = newNotes ?? reminder.notes
         reminder.isCompleted = isCompleted ?? reminder.isCompleted
@@ -287,12 +199,13 @@ public final class Reminders {
           reminder.url = URL(string: unwrappedURL)
         }
         try Store.save(reminder, commit: true)
-
-      } catch let error {
-        print("Failed to update reminder with error: \(error)")
-        return
+      } catch let err {
+        error = err
       }
       semaphore.signal()
+    }
+    if let error = error {
+      throw error
     }
     semaphore.wait()
     return result
@@ -324,32 +237,25 @@ public final class Reminders {
     }
   }
 
-  /// Get Reminder List by ID
-  /// - Parameter id: String
-  /// - Throws:
-  /// - Returns: EKCalendar
-  private func calendar(id: String) throws -> EKCalendar {
-    if let calendar = self.getCalendars().find(where: {
-      $0.calendarIdentifier.lowercased() == id.lowercased()
+  private func calendar(query: String) -> EKCalendar? {
+    let calendars = self.getCalendars()
+    if let number = Int(query) {
+      if number < calendars.count {
+        return calendars[number]
+      }
     }
-    ) {
-      return calendar
-    } else {
-      throw RemindersError.listError(message: "No reminders list matching id: \(id)")
+    let calendar = self.getCalendars().first {
+      $0.calendarIdentifier.lowercased() == query.lowercased()
+        || $0.title.lowercased() == query.lowercased()
     }
+    return calendar
   }
 
-  /// Get Reminder List by Name
-  /// - Parameter name: String
-  /// - Throws:
-  /// - Returns: EKCalendar
-  private func calendar(withName name: String) throws -> EKCalendar {
-    if let calendar = self.getCalendars().find(where: { $0.title.lowercased() == name.lowercased() }
-    ) {
-      return calendar
-    } else {
-      throw RemindersError.listError(message: "No reminders list matching \(name)")
+  private func getCalendar(query: String) throws -> EKCalendar {
+    guard let calendar = calendar(query: query) else {
+      throw RemindersError.listError(message: "No reminders list matching: \(query)")
     }
+    return calendar
   }
 
   /// Get all Lists of Reminders.
@@ -361,18 +267,30 @@ public final class Reminders {
       .filter { $0.allowsContentModifications }
   }
 
-  /// Get Reminder by index or external ID
+  /// Get Reminder by index or external ID or title
   /// - Parameters:
   ///   - reminders: EKReminder array
   ///   - index: index or external Id
   ///
   /// - Returns: An optional EKReminder
-  private func getReminder(from reminders: [EKReminder], at index: String) -> EKReminder? {
-    precondition(!index.isEmpty, "Index cannot be empty, argument parser must be misconfigured")
-    if let index = Int(index) {
-      return reminders[safe: index]
-    } else {
-      return reminders.first { $0.calendarItemExternalIdentifier == index }
+  private func getReminder(from reminders: [EKReminder], query: String) -> EKReminder? {
+    precondition(!query.isEmpty, "Index cannot be empty, argument parser must be misconfigured")
+    if let index = Int(query) {
+      if index < reminders.count {
+        return reminders[index]
+      }
     }
+    return reminders.first { $0.calendarItemExternalIdentifier == query || $0.title == query }
   }
+
+  private func getReminder(from reminders: [EKReminder], on calendar: EKCalendar, query: String)
+    throws -> EKReminder
+  {
+    guard let reminder = getReminder(from: reminders, query: query) else {
+      throw RemindersError.reminderError(
+        message: "No reminder at \(query) on \(calendar.title) (\(calendar.calendarIdentifier))")
+    }
+    return reminder
+  }
+
 }

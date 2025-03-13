@@ -5,7 +5,7 @@ private let reminders = RemindersCommand()
 
 private struct ShowLists: ParsableCommand {
   static let configuration = CommandConfiguration(
-    abstract: "Print the name of lists to pass to other commands")
+    abstract: "Print the lists")
   @Option(
     name: .shortAndLong,
     help: "format, either of 'plain' or 'json'")
@@ -27,14 +27,6 @@ private struct ShowAll: ParsableCommand {
   @Flag(help: "Include completed items in output")
   var includeCompleted = false
 
-  @Flag(help: "When using --due-date, also include items due before the due date")
-  var includeOverdue = false
-
-  @Option(
-    name: .shortAndLong,
-    help: "Show only reminders due on this date")
-  var dueDate: DateComponents?
-
   @Option(
     name: .shortAndLong,
     help: "format, either of 'plain' or 'json'")
@@ -55,10 +47,7 @@ private struct ShowAll: ParsableCommand {
     } else if self.includeCompleted {
       displayOptions = .all
     }
-
-    reminders.showAllReminders(
-      dueOn: self.dueDate, includeOverdue: self.includeOverdue,
-      displayOptions: displayOptions)
+    reminders.showAllReminders(displayOptions: displayOptions)
   }
 }
 
@@ -67,33 +56,16 @@ private struct Show: ParsableCommand {
     abstract: "Print the items on the given list")
 
   @Argument(
-    help: "The list to print items from, see 'show-lists' for names",
+    help:
+      "List to print items from (see 'show-lists' for list information). Input index, ID, or name.",
     completion: .custom(listNameCompletion))
-  var listName: String
+  var query: String
 
   @Flag(help: "Show completed items only")
   var onlyCompleted = false
 
   @Flag(help: "Include completed items in output")
   var includeCompleted = false
-
-  @Flag(help: "When using --due-date, also include items due before the due date")
-  var includeOverdue = false
-
-  @Option(
-    name: .shortAndLong,
-    help: "Show the reminders in a specific order, one of: \(Sort.commaSeparatedCases)")
-  var sort: Sort = .none
-
-  @Option(
-    name: [.customShort("o"), .long],
-    help: "How the sort order should be applied, one of: \(CustomSortOrder.commaSeparatedCases)")
-  var sortOrder: CustomSortOrder = .ascending
-
-  @Option(
-    name: .shortAndLong,
-    help: "Show only reminders due on this date")
-  var dueDate: DateComponents?
 
   @Option(
     name: .shortAndLong,
@@ -117,8 +89,8 @@ private struct Show: ParsableCommand {
     }
 
     reminders.showListItems(
-      withName: self.listName, dueOn: self.dueDate, includeOverdue: self.includeOverdue,
-      displayOptions: displayOptions, sort: sort, sortOrder: sortOrder)
+      query: self.query,
+      displayOptions: displayOptions)
   }
 }
 
@@ -127,9 +99,9 @@ private struct Add: ParsableCommand {
     abstract: "Add a reminder to a list")
 
   @Argument(
-    help: "The list to add to, see 'show-lists' for names",
+    help: "The list to add to, (see 'show-lists' for list information). Input index, ID, or name.",
     completion: .custom(listNameCompletion))
-  var listName: String
+  var listQuery: String
 
   @Argument(
     parsing: .remaining,
@@ -166,7 +138,7 @@ private struct Add: ParsableCommand {
     reminders.addReminder(
       string: self.reminder.joined(separator: " "),
       notes: self.notes,
-      listId: self.listName,
+      listQuery: self.listQuery,
       dueDateComponents: self.dueDate,
       priority: priority,
       url: self.url
@@ -179,13 +151,16 @@ private struct Complete: ParsableCommand {
     abstract: "Complete a reminder")
 
   @Argument(
-    help: "The list to complete a reminder on, see 'show-lists' for names",
+    help:
+      "The list to complete a reminder on, (see 'show-lists' for list information). Input index, ID, or name.",
     completion: .custom(listNameCompletion))
-  var listId: String
+  var listQuery: String
 
   @Argument(
-    help: "The index or id of the reminder to delete, see 'show' for indexes")
-  var index: String
+    help:
+      "The query of the reminder to complete, (see 'show' for reminder information). Input index, ID, or name."
+  )
+  var query: String
 
   @Option(
     name: .shortAndLong,
@@ -196,7 +171,7 @@ private struct Complete: ParsableCommand {
     reminders.outputFormat = self.format
 
     reminders.setComplete(
-      true, itemAtIndex: self.index, onListId: self.listId)
+      true, query: query, listQuery: listQuery)
   }
 }
 
@@ -205,13 +180,16 @@ private struct Uncomplete: ParsableCommand {
     abstract: "Uncomplete a reminder")
 
   @Argument(
-    help: "The list to uncomplete a reminder on, see 'show-lists' for names",
+    help:
+      "The list to uncomplete a reminder on, (see 'show-lists' for list information). Input index, ID, or name.",
     completion: .custom(listNameCompletion))
-  var listId: String
+  var listQuery: String
 
   @Argument(
-    help: "The index or id of the reminder to delete, see 'show' for indexes")
-  var index: String
+    help:
+      "The query of the reminder to uncomplete, (see 'show' for reminder information). Input index, ID, or name."
+  )
+  var query: String
 
   @Option(
     name: .shortAndLong,
@@ -222,7 +200,7 @@ private struct Uncomplete: ParsableCommand {
     reminders.outputFormat = self.format
 
     reminders.setComplete(
-      false, itemAtIndex: self.index, onListId: self.listId)
+      false, query: self.query, listQuery: self.listQuery)
   }
 }
 
@@ -231,17 +209,20 @@ private struct Delete: ParsableCommand {
     abstract: "Delete a reminder")
 
   @Argument(
-    help: "The list to delete a reminder on, see 'show-lists' for names",
+    help:
+      "The list to delete a reminder on, (see 'show-lists' for list information). Input index, ID, or name.",
     completion: .custom(listNameCompletion))
-  var listName: String
+  var listQuery: String
 
   @Argument(
-    help: "The index or id of the reminder to delete, see 'show' for indexes")
-  var index: String
+    help:
+      "The query of the reminder to uncomplete, (see 'show' for reminder information). Input index, ID, or name."
+  )
+  var query: String
 
   func run() {
     // reminders.outputFormat = self.format
-    reminders.delete(indexOrId: self.index, listId: self.listName)
+    reminders.delete(query: self.query, listQuery: self.query)
   }
 }
 
@@ -257,13 +238,16 @@ private struct Edit: ParsableCommand {
     abstract: "Edit the text of a reminder")
 
   @Argument(
-    help: "The list to edit a reminder on, see 'show-lists' for names",
+    help:
+      "The list to edit a reminder on, (see 'show-lists' for list information). Input index, ID, or name.",
     completion: .custom(listNameCompletion))
-  var listName: String
+  var listQuery: String
 
   @Argument(
-    help: "The index or id of the reminder to delete, see 'show' for indexes")
-  var index: String
+    help:
+      "The query of the reminder to uncomplete, (see 'show' for reminder information). Input index, ID, or name."
+  )
+  var query: String
 
   @Option(
     name: .shortAndLong,
@@ -296,8 +280,8 @@ private struct Edit: ParsableCommand {
 
     let newText = self.reminder.joined(separator: " ")
     reminders.edit(
-      itemAtIndex: self.index,
-      onListId: self.listName,
+      query: self.query,
+      listQuery: self.listQuery,
       newText: newText.isEmpty ? nil : newText,
       newNotes: self.notes,
       url: self.url,
