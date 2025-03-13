@@ -79,24 +79,35 @@ public final class Reminders {
         throw RemindersError.listSourceError(
           message: "No source named '\(requestedSourceName)'")
       }
-
       source = requestedSource
     } else {
       let uniqueSources = Set(sources.map { $0.title })
       if uniqueSources.count > 1 {
-
         throw RemindersError.listSourceError(
           message: "Multiple sources were found, please specify one with --source: \(uniqueSources)"
         )
       }
     }
-
     let newList = EKCalendar(for: .reminder, eventStore: store)
     newList.title = name
     newList.source = source
-
     try store.saveCalendar(newList, commit: true)
     return newList
+  }
+
+  public func deleteList(query: String) throws -> EKCalendar {
+    let store = EKEventStore()
+    let calendar = try getCalendar(query: query)
+    try store.removeCalendar(calendar, commit: true)
+    return calendar
+  }
+
+  public func editList(query: String, title: String) throws -> EKCalendar {
+    let store = EKEventStore()
+    let calendar = try getCalendar(query: query)
+    calendar.title = title
+    try store.saveCalendar(calendar, commit: true)
+    return calendar
   }
 
   func getListItems(query: String, displayOptions: DisplayOptions = .all) throws -> [EKReminder] {

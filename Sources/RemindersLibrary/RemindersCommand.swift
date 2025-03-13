@@ -17,6 +17,26 @@ public final class RemindersCommand {
     }
   }
 
+  public func deleteList(query: String) {
+    do {
+      let newList = try reminders.deleteList(query: query)
+      printOutput(data: newList, action: "Delete List: ")
+    } catch let error {
+      print("Failed delete list with error: \(error)")
+      exit(1)
+    }
+  }
+
+  public func editList(query: String, with name: String) {
+    do {
+      let newList = try reminders.editList(query: query, title: name)
+      printOutput(data: newList, action: "Eidt List: ")
+    } catch let error {
+      print("Failed Eidt list with error: \(error)")
+      exit(1)
+    }
+  }
+
   func showLists() {
     let lists = reminders.getLists()
     printOutput(data: lists)

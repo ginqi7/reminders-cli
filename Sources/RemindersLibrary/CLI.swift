@@ -307,8 +307,35 @@ private struct NewList: ParsableCommand {
   var source: String?
 
   func run() {
-    // reminders.outputFormat = self.format
     reminders.newList(with: self.listName, source: self.source)
+  }
+}
+
+private struct DeleteList: ParsableCommand {
+  static let configuration = CommandConfiguration(
+    abstract: "Delete a list")
+
+  @Argument(
+    help: "Query a list by index or ID or Name")
+  var query: String
+
+  func run() {
+    reminders.deleteList(query: query)
+  }
+}
+
+private struct EditList: ParsableCommand {
+  static let configuration = CommandConfiguration(
+    abstract: "Edit a list")
+
+  @Argument(help: "Query a list by index or ID or Name")
+  var query: String
+
+  @Argument(help: "The new name of the list")
+  var name: String
+
+  func run() {
+    reminders.editList(query: query, with: name)
   }
 }
 
@@ -325,6 +352,8 @@ public struct CLI: ParsableCommand {
       Show.self,
       ShowLists.self,
       NewList.self,
+      DeleteList.self,
+      EditList.self,
       ShowAll.self,
     ]
   )
