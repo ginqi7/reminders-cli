@@ -64,12 +64,13 @@ public final class RemindersCommand {
 
   func edit(
     query: String, listQuery: String, newText: String?, newNotes: String?,
-    url: String?, isCompleted: Bool?, priority: Int?
+    url: String?, isCompleted: Bool?, priority: Int?, dueDateComponents: DateComponents?
+
   ) {
     do {
       let reminder = try reminders.updateItem(
         query: query, listQuery: listQuery, newText: newText, newNotes: newNotes, url: url,
-        isCompleted: isCompleted, priority: priority)
+        isCompleted: isCompleted, priority: priority, dueDateComponents: dueDateComponents)
       printOutput(data: reminder, action: "Edit Reminder: ")
     } catch let error {
       print("Failed create new list with error: \(error)")
@@ -84,7 +85,7 @@ public final class RemindersCommand {
     do {
       let reminder = try reminders.updateItem(
         query: query, listQuery: listQuery, newText: nil, newNotes: nil, url: nil,
-        isCompleted: complete, priority: nil)
+        isCompleted: complete, priority: nil, dueDateComponents: nil)
       printOutput(data: reminder, action: "Complete Reminder: ")
     } catch let error {
       print("Failed create new list with error: \(error)")

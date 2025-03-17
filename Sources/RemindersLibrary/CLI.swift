@@ -269,6 +269,11 @@ private struct Edit: ParsableCommand {
     help: "URL, unvisible in Reminders GUI")
   var url: String?
 
+  @Option(
+    name: .shortAndLong,
+    help: "The date the reminder is due")
+  var dueDate: DateComponents?
+
   func validate() throws {
     if self.reminder.isEmpty && self.notes == nil {
       throw ValidationError("Must specify either new reminder content or new notes")
@@ -286,7 +291,8 @@ private struct Edit: ParsableCommand {
       newNotes: self.notes,
       url: self.url,
       isCompleted: false,
-      priority: 0
+      priority: 0,
+      dueDateComponents: self.dueDate
     )
   }
 }

@@ -191,7 +191,8 @@ public final class Reminders {
     newNotes: String?,
     url: String?,
     isCompleted: Bool?,
-    priority: Int?
+    priority: Int?,
+    dueDateComponents: DateComponents?
   ) throws -> EKReminder? {
 
     let calendar = try self.getCalendar(query: listQuery)
@@ -208,6 +209,10 @@ public final class Reminders {
         reminder.priority = priority ?? reminder.priority
         if let unwrappedURL = url {
           reminder.url = URL(string: unwrappedURL)
+        }
+        reminder.dueDateComponents = dueDateComponents ?? reminder.dueDateComponents
+        if let dueDate = dueDateComponents?.date, dueDateComponents?.hour != nil {
+          reminder.addAlarm(EKAlarm(absoluteDate: dueDate))
         }
         try Store.save(reminder, commit: true)
       } catch let err {
