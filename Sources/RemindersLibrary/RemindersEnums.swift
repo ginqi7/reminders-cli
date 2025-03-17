@@ -1,5 +1,5 @@
-import EventKit
 import ArgumentParser
+import EventKit
 import Foundation
 
 public enum OutputFormat: String, ExpressibleByArgument {
@@ -14,7 +14,7 @@ public enum RemindersError: Error {
   case unknown(message: String)
 }
 
-public enum DisplayOptions: String, Decodable {
+public enum DisplayOptions: String, Decodable, ExpressibleByArgument {
   case all
   case incomplete
   case complete
