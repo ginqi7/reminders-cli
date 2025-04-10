@@ -192,7 +192,8 @@ public final class Reminders {
     url: String?,
     isCompleted: Bool?,
     priority: Int?,
-    dueDateComponents: DateComponents?
+    dueDateComponents: DateComponents?,
+    listId: String? = nil
   ) throws -> EKReminder? {
 
     let calendar = try self.getCalendar(query: listQuery)
@@ -203,6 +204,10 @@ public final class Reminders {
       do {
         let reminder = try self.getReminder(from: reminders, on: calendar, query: query)
         result = reminder
+        if let listId = listId {
+          let calendar = try self.getCalendar(query: listId)
+          reminder.calendar = calendar
+        }
         reminder.title = newText ?? reminder.title
         reminder.notes = newNotes ?? reminder.notes
         reminder.isCompleted = isCompleted ?? reminder.isCompleted

@@ -297,6 +297,50 @@ private struct Edit: ParsableCommand {
   }
 }
 
+private struct Move: ParsableCommand {
+  static let configuration = CommandConfiguration(
+    abstract: "Move reminder to other list.")
+
+  @Argument(
+    help:
+      "The source list  a reminder on, (see 'show-lists' for list information). Input index, ID, or name.",
+    completion: .custom(listNameCompletion))
+  var sourceList: String
+
+  @Argument(
+    help:
+      "The query of the reminder to move, (see 'show' for reminder information). Input index, ID, or name."
+  )
+  var query: String
+
+  @Argument(
+    help:
+      "The target list  a reminder on, (see 'show-lists' for list information). Input index, ID, or name.",
+    completion: .custom(listNameCompletion))
+  var targetList: String
+
+  @Option(
+    name: .shortAndLong,
+    help: "format, either of 'plain' or 'json'")
+  var format: OutputFormat = .plain
+
+  func run() {
+    reminders.outputFormat = self.format
+
+    reminders.edit(
+      query: self.query,
+      listQuery: self.sourceList,
+      newText: nil,
+      newNotes: nil,
+      url: nil,
+      isCompleted: nil,
+      priority: nil,
+      dueDateComponents: nil,
+      newListId: targetList
+    )
+  }
+}
+
 private struct NewList: ParsableCommand {
   static let configuration = CommandConfiguration(
     abstract: "Create a new list")
@@ -361,6 +405,7 @@ public struct CLI: ParsableCommand {
       DeleteList.self,
       EditList.self,
       ShowAll.self,
+      Move.self,
     ]
   )
 

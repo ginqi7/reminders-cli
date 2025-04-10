@@ -64,13 +64,14 @@ public final class RemindersCommand {
 
   func edit(
     query: String, listQuery: String, newText: String?, newNotes: String?,
-    url: String?, isCompleted: Bool?, priority: Int?, dueDateComponents: DateComponents?
-
+    url: String?, isCompleted: Bool?, priority: Int?, dueDateComponents: DateComponents?,
+    newListId: String? = nil
   ) {
     do {
       let reminder = try reminders.updateItem(
         query: query, listQuery: listQuery, newText: newText, newNotes: newNotes, url: url,
-        isCompleted: isCompleted, priority: priority, dueDateComponents: dueDateComponents)
+        isCompleted: isCompleted, priority: priority, dueDateComponents: dueDateComponents,
+        listId: newListId)
       printOutput(data: reminder, action: "Edit Reminder: ")
     } catch let error {
       print("Failed create new list with error: \(error)")
